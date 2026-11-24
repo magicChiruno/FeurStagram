@@ -12,8 +12,18 @@ import java.util.List;
  */
 final class JsonContentFilter {
     private final boolean adGraphQl;
-    JsonContentFilter() { this(false); }
-    JsonContentFilter(boolean adGraphQl) { this.adGraphQl = adGraphQl; }
+    /**
+     * Search-result grids (posts, Reels): every root-level list or object is
+     * emptied whatever its name, so the filter does not depend on the exact
+     * field names of those responses. Scalars such as {@code status} stay.
+     */
+    private final boolean blankRoots;
+    JsonContentFilter() { this(false, false); }
+    JsonContentFilter(boolean adGraphQl) { this(adGraphQl, false); }
+    JsonContentFilter(boolean adGraphQl, boolean blankRoots) {
+        this.adGraphQl = adGraphQl;
+        this.blankRoots = blankRoots;
+    }
     private final List<Boolean> objects = new ArrayList<>();
     private final List<String> containers = new ArrayList<>();
     private final StringBuilder key = new StringBuilder();
@@ -84,7 +94,9 @@ final class JsonContentFilter {
             containerField = field;
             // Only root delivery lists, never arbitrary nested objects such as
             // challenge, checkpoint, login, error or account-status information.
-            if (objects.size() == 1 && (contentField(field) || (adGraphQl && "data".equals(field)))
+            if (objects.size() == 1
+                    && (contentField(field) || (adGraphQl && "data".equals(field))
+                        || (blankRoots && field != null))
                     && (c == '[' || c == '{')) {
                 out.write(c); out.write(c == '[' ? ']' : '}');
                 skipDepth = 1;

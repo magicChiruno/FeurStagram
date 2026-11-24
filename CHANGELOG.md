@@ -4,7 +4,16 @@ All notable changes to Feurstagram should be documented in this file.
 
 ## Unreleased
 
-Nothing yet.
+### Fixed
+
+- **Search no longer works as a way around Explore and Reels.** Typing any word in Search
+  (for example "meme") returned the posts and Reels grid of the "For you" and "Not
+  personalized" tabs, which brought back the content the Explore and Reels blocks hide. The
+  responses of `/fbsearch/top_serp/`, `/fbsearch/web/top_serp/` (Explore block) and
+  `/fbsearch/reels_serp/` (Reels or Explore block) are now emptied, with every root-level
+  list and object blanked whatever its name (`Block.blanksSearchGrid`). Account search,
+  search-as-you-type, hashtags, places and recent searches use other endpoints and are
+  untouched.
 
 ## v456-0-0-53-78
 

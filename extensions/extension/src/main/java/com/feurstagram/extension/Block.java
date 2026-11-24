@@ -35,6 +35,23 @@ public final class Block {
     };
 
     /**
+     * Search results that are a browsable grid of posts: the "For you" and "Not
+     * personalized" tabs of a search. Typing any word there returned the same
+     * wall of posts and Reels as Explore, so it is hidden with Explore. Accounts,
+     * hashtags, places, recent searches and the search-as-you-type suggestions
+     * use other endpoints and are left alone.
+     */
+    private static final String[] SEARCH_POST_GRIDS = {
+            "/fbsearch/top_serp/",
+            "/fbsearch/web/top_serp/",
+    };
+
+    /** Search results that are a grid of Reels: the Reels tab of a search. */
+    private static final String[] SEARCH_REEL_GRIDS = {
+            "/fbsearch/reels_serp/",
+    };
+
+    /**
      * Feed-item JSON type tokens for ad/promo units injected inline into the
      * timeline payload. Gated on the Ads toggle. {@code media_or_ad} (regular
      * posts) is deliberately absent — dropping it would empty the whole feed.
@@ -202,8 +219,21 @@ public final class Block {
                 || (Config.isExploreBlocked() && path.contains("/discover/topical_explore"))
                 || (Config.isReelsBlocked() && (path.contains("/clips/home/")
                     || path.contains("/clips/discover") || path.contains("/clips/get_blend_medias/")))
+                || (Config.isExploreBlocked() && containsAny(path, SEARCH_POST_GRIDS))
+                || ((Config.isReelsBlocked() || Config.isExploreBlocked()) && containsAny(path, SEARCH_REEL_GRIDS))
                 || (Config.isSuggestedBlocked() && containsAny(path, SUGGESTED))
                 || (Config.isAdsBlocked() && containsAny(path, ADS));
+    }
+
+    /**
+     * Whether a hidden response is a search-result grid, whose root-level lists
+     * and objects are all emptied (see {@link JsonContentFilter}) instead of only
+     * the ones with a known name.
+     */
+    static boolean blanksSearchGrid(URI uri) {
+        if (uri == null || uri.getPath() == null) return false;
+        String path = uri.getPath();
+        return containsAny(path, SEARCH_POST_GRIDS) || containsAny(path, SEARCH_REEL_GRIDS);
     }
 
     /**

@@ -84,6 +84,42 @@ public class Harness {
         if (!"following".equals(LimitFeed.setFollowingHeader(ranked).get("pagination_source")))
             throw new AssertionError("visible following header");
         Config.block = true;
+        String[] searchGrids = {"https://i.instagram.com/api/v1/fbsearch/top_serp/?query=meme",
+            "https://i.instagram.com/api/v1/fbsearch/web/top_serp/?query=meme",
+            "https://i.instagram.com/api/v1/fbsearch/reels_serp/?query=meme"};
+        for (String url : searchGrids) {
+            if (!Block.hidesResponse(URI.create(url))) throw new AssertionError("search grid kept " + url);
+            Object search = new Object();
+            Request searchRequest = new Request(url);
+            ResponseFilter.onResponse(search, new Response(200), searchRequest);
+            ByteBuffer searchBody = ByteBuffer.wrap(data("{\"media_grid\":{\"sections\":[1]},\"whatever_name\":[{\"a\":1}],"
+                + "\"nested_unknown\":{\"x\":[2]},\"status\":\"ok\",\"rank_token\":\"abc\",\"has_more\":true}"));
+            ByteBuffer searchResult = ResponseFilter.onBody(search, searchRequest, searchBody);
+            byte[] searchBytes = new byte[searchResult.remaining()]; searchResult.get(searchBytes);
+            if (!new String(searchBytes, "UTF-8").equals("{\"media_grid\":{},\"whatever_name\":[],\"nested_unknown\":{},"
+                    + "\"status\":\"ok\",\"rank_token\":\"abc\",\"has_more\":false}"))
+                throw new AssertionError("search grid body " + new String(searchBytes, "UTF-8"));
+            ResponseFilter.onComplete(search);
+        }
+        // Account search, search-as-you-type, hashtags, places and recent searches keep working.
+        String[] searchKept = {"https://i.instagram.com/api/v1/fbsearch/account_serp/?query=meme",
+            "https://i.instagram.com/api/v1/fbsearch/typeahead_stream/", "https://i.instagram.com/api/v1/fbsearch/topsearch_flat/",
+            "https://i.instagram.com/api/v1/fbsearch/recent_searches/", "https://i.instagram.com/api/v1/fbsearch/profile_link_search/",
+            "https://i.instagram.com/api/v1/fbsearch/places/", "https://i.instagram.com/api/v1/tags/search/"};
+        for (String url : searchKept) if (Block.hidesResponse(URI.create(url))) throw new AssertionError("search hidden " + url);
+        Config.block = false;
+        for (String url : searchGrids) if (Block.hidesResponse(URI.create(url))) throw new AssertionError("search toggle off " + url);
+        Config.block = true;
+        // Other hidden endpoints keep the name-based filter: unknown root keys stay untouched.
+        Object plain = new Object();
+        Request plainRequest = new Request("https://i.instagram.com/api/v1/feed/timeline/");
+        ResponseFilter.onResponse(plain, new Response(200), plainRequest);
+        ByteBuffer plainBody = ByteBuffer.wrap(data("{\"unknown_name\":[1],\"items\":[1]}"));
+        ByteBuffer plainResult = ResponseFilter.onBody(plain, plainRequest, plainBody);
+        byte[] plainBytes = new byte[plainResult.remaining()]; plainResult.get(plainBytes);
+        if (!new String(plainBytes, "UTF-8").equals("{\"unknown_name\":[1],\"items\":[]}"))
+            throw new AssertionError("name-based filter changed");
+        ResponseFilter.onComplete(plain);
         Object a = new Object(), b = new Object();
         Request req = new Request("https://i.instagram.com/api/v1/feed/timeline/");
         ResponseFilter.onResponse(a, new Response(200), req);
@@ -97,7 +133,7 @@ public class Harness {
         field.setAccessible(true);
         ResponseFilter.onComplete(b);
         if (!((Map<?,?>) field.get(null)).isEmpty()) throw new AssertionError("active states remain");
-        System.out.println("HTTP errors, toggles, hosts, telemetry, concurrency and cleanup: OK");
+        System.out.println("HTTP errors, toggles, hosts, search grids, telemetry, concurrency and cleanup: OK");
     }
 }
 '''

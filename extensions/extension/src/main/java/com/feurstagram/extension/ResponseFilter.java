@@ -85,7 +85,7 @@ public final class ResponseFilter {
         State(URI uri, int status, boolean hide) {
             path = uri == null ? "" : uri.getPath();
             this.status = status;
-            filter = hide ? new JsonContentFilter(path.contains("/ads/graphql")) : null;
+            filter = hide ? new JsonContentFilter(path.contains("/ads/graphql"), Block.blanksSearchGrid(uri)) : null;
         }
     }
 }
